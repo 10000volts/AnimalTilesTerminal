@@ -1,0 +1,37 @@
+import socket
+
+from utils.color import color, color_print, EColor
+
+if __name__ == '__main__':
+  port = 8002
+
+  color_print("欢迎光临花鸟瓷砖~")
+  color_print("作为客户端吗？(y/n)")
+  client = (input() == 'y')
+  color_print("输入目标ip")
+  ip = input()
+  # color_print("输入目标port")
+  # port = input()
+  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  if client:
+    try:
+      s.connect((ip, port))
+    except Exception as ex:
+      color_print(ex, EColor.ERROR)
+      color_print("连接服务端失败。退出。", EColor.ERROR)
+      exit()
+
+    color_print("已加入比赛！", EColor.EMPHASIS)
+  else:
+    try:
+      s.bind((ip, port))
+    except Exception as ex:
+      color_print(ex, EColor.ERROR)
+      color_print("服务端创建失败。退出。", EColor.ERROR)
+      exit()
+    s.listen(5)
+    conn, addr = s.accept()
+    color_print("{}加入了比赛！".format(color(addr, EColor.EMPHASIS)))
+
+    conn.close()
+    s.close()
