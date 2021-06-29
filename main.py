@@ -1,9 +1,11 @@
 import socket
 
+from myio import IO
+from game import Game
 from utils.color import color, color_print, EColor
 
 if __name__ == '__main__':
-  port = 8002
+  port = 5555
 
   color_print("欢迎光临花鸟瓷砖~")
   color_print("作为客户端吗？(y/n)")
@@ -21,6 +23,7 @@ if __name__ == '__main__':
       color_print("连接服务端失败。退出。", EColor.ERROR)
       exit()
 
+    io = IO(s)
     color_print("已加入比赛！", EColor.EMPHASIS)
   else:
     try:
@@ -31,7 +34,10 @@ if __name__ == '__main__':
       exit()
     s.listen(5)
     conn, addr = s.accept()
+
     color_print("{}加入了比赛！".format(color(addr, EColor.EMPHASIS)))
+    io = IO(s)
+    g = Game(io)
 
     conn.close()
     s.close()

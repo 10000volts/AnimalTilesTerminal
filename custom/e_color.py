@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class EColor(Enum):
     """
     0(默认)、30(黑)、31(红)、32(绿)、33(黄)、
