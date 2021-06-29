@@ -33,11 +33,13 @@ if __name__ == '__main__':
       color_print("服务端创建失败。退出。", EColor.ERROR)
       exit()
     s.listen(5)
+    color_print("等待对方加入比赛...", EColor.EMPHASIS)
     conn, addr = s.accept()
 
     color_print("{}加入了比赛！".format(color(addr, EColor.EMPHASIS)))
     io = IO(s)
     g = Game(io)
+    g.start()
 
     conn.close()
     s.close()

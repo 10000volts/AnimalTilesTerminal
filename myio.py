@@ -3,4 +3,7 @@ class IO:
     self.socket = s
 
   def send(self, message):
-    pass
+    self.socket.send((message + '|').encode())
+
+  def recv(self):
+    return self.socket.recv(1024).decode().split('|')[0]
