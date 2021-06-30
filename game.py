@@ -24,13 +24,16 @@ class Player:
 
     # 拥有的每种瓷砖的数量
     self.hand = [0 for i in range(0, 16)]
+    # 仅客户端模式时有用
+    self.hand_count = 0
     # 输入方式
     self._inp = inp
     self._out = out
+    self.sp = 0
 
   def input(self, message=dict()):
     if len(message) > 0:
-      self.output(json.dumps(message))
+      self.output(message)
     return self._inp()
 
   def output(self, message: dict):
@@ -61,6 +64,8 @@ class Game:
     # 客户端
     self.p2 = Player(io.recv, io.send)
     self.players = [self.p1, self.p2]
+    # 下一个行动的玩家
+    self.act_next = 0
     self.shop = list()
     # 瓷砖池
     self.pool = [x for i in range(6) for x in [BIRD, FISH, INSECT, MAMMAL]]
@@ -115,17 +120,23 @@ class Game:
     if self._have_pattern(self.expect_board):
       self._rand_expect_board()
     else:
-      for p in self.players:
-        p.output(Game.make_message('rst_brd', 0, self.expect_board))
+      client = self.players[self.sp]
+      client.output(Game.make_message('rst_brd', 0, self.expect_board))
 
   def _init_hand(self):
     self.players[0].hand[BIRD | FISH | INSECT | MAMMAL] = 2
     self.players[1].hand[BIRD | FISH | INSECT | MAMMAL] = 2
+    count = 2
     for i in range(0, 8):
       style = self.pool.pop()
       self.players[0].hand[style] += 1
       style = self.pool.pop()
       self.players[1].hand[style] += 1
+      count += 1
+    # 只给客户端发送
+    client = self.players[self.sp]
+    client.output(Game.make_message('rst_hnd', 1, client.hand))
+    client.output(Game.make_message('rst_hnd', 0, count))
 
   def _replenish(self):
     """
@@ -137,23 +148,26 @@ class Game:
         shuffle(pool)
         self.pool.extend(pool)
       self.shop.append(self.pool.pop())
-    for p in self.players:
-      p.output(Game.make_message('rst_shp', 0, self.shop))
+    client = self.players[self.sp]
+    client.output(Game.make_message('rst_shp', 0, self.shop))
 
   def start(self):
     if not self.client:
-      self._rand_expect_board()
-      shuffle(self.pool)
       self.sp = random.randint(0, 1)
       if self.sp == 0:
         self.players[0] = self.p2
         self.players[1] = self.p1
         self.p1 = self.players[0]
         self.p2 = self.players[1]
+      self.p1.sp = 1
+      self.p1.sp = 0
       self.p1.output(Game.make_message('dcd_sp', 1, None))
       self.p2.output(Game.make_message('dcd_sp', 0, None))
       # 后手初始获得1分
       self.p2.score = 1
+
+      self._rand_expect_board()
+      shuffle(self.pool)
 
       self._init_hand()
       self._replenish()
@@ -161,10 +175,10 @@ class Game:
         p.output(Game.make_message('init', 0, None))
 
       while True:
-        win = self.action(self.players[0])
+        win = self.action(self.players[self.act_next])
         if win > -1:
           break
-        win = self.action(self.players[1])
+        win = self.action(self.players[self.act_next])
         if win > -1:
           break
     else:
@@ -175,9 +189,12 @@ class Game:
     # 返回值：-1 未决出胜负 0 先手玩家胜 1 后手玩家胜
     while True:
       try:
-        cmd = p.input()
+        cmd = p.input(Game.make_message('req_act', 1, None, True))
+        print(cmd)
+        break
       except Exception as ex:
         pass
+    self.act_next = 1 - self.act_next
     return -1
 
   def _print_board(self):
@@ -186,9 +203,10 @@ class Game:
     """
     op = self.players[self.sp]
     p = self.players[1 - self.sp]
-    count = 0
-    for hand in op.hand:
-      count += hand
+    count = op.hand_count
+    if not self.client:
+      for hand in op.hand:
+        count += hand
     color_print("对手分数: {} 对手剩余瓷砖数: {} 对方额外得分数: {}".format(
       color(op.score, EColor.NUMBER), 
       color(count, EColor.NUMBER),
@@ -201,7 +219,8 @@ class Game:
           s += '{}({}) '.format(color(TILE_STYLE_NAME[self.board[y][x]], EColor.EMPHASIS),
                                 color(TILE_STYLE_NAME[self.expect_board[y][x]]))
         else:
-          s += '{}({}) '.format('空', color(TILE_STYLE_NAME[self.expect_board[y][x]]))
+          s += '{}({}) '.format(color('空', EColor.NONE), 
+                                color(TILE_STYLE_NAME[self.expect_board[y][x]]))
       color_print(s)
     s = '商店: '
     cost = 0
@@ -226,24 +245,36 @@ class Game:
   def _translate_and_print(self, recv):
     recv = json.loads(recv)
     if recv['op'] == 'rst_brd':
-      if self.client:
-        self.expect_board = recv['data']
+      self.expect_board = recv['data']
     elif recv['op'] == 'rst_shp':
-      if self.client:
-        self.shop = recv['data']
+      self.shop = recv['data']
+    elif recv['op'] == 'rst_hnd':
+      if recv['p']:
+        self.players[1-self.sp].hand = recv['data']
+      else:
+        self.players[self.sp].hand_count = recv['data']
     elif recv['op'] == 'dcd_sp':
       if recv['p']:
         if self.client:
+          self.sp = 1
+          self.p1.sp = 1
           self.players[1].score = 1
         color_print('您获得了先手!', EColor.EMPHASIS)
       else:
         if self.client:
+          self.sp = 0
           self.players[0] = self.p2
           self.players[1] = self.p1
           self.p1 = self.players[0]
           self.p2 = self.players[1]
+          self.p1.sp = 1
           self.players[1].score = 1
         color_print('对方获得了先手!', EColor.EMPHASIS)
     elif recv['op'] == 'init':
       self._print_board()
+    elif recv['op'] == 'req_act':
+      color_print('轮到您行动!', EColor.EMPHASIS)
+      if self.client:
+        cmd = input()
+        self.io.send(cmd)
       

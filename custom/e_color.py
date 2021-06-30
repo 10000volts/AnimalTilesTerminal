@@ -19,3 +19,5 @@ class EColor(Enum):
 
     # num
     NUMBER = 35
+    # non
+    NONE = 0

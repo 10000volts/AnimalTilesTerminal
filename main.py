@@ -1,4 +1,5 @@
 import socket
+from time import sleep
 
 from myio import IO
 from game import Game

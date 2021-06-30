@@ -5,6 +5,7 @@ _color = {EColor.DEFAULT_COLOR: '<dc--|{}>',
           EColor.OP_PLAYER: '<op--|{}>',
           EColor.EMPHASIS: '<emn-|{}>',
           EColor.NUMBER: '<num-|{}>',
+          EColor.NONE: '<non-|{}>',
           EColor.ERROR: '<err-|{}>',
           }
 
@@ -15,6 +16,7 @@ _color_ind = {'<dc--|': EColor.DEFAULT_COLOR.value,
               '<err-|': EColor.ERROR.value,
 
               '<num-|': EColor.NUMBER.value,
+              '<non-|': EColor.NONE.value,
               }
 
 
