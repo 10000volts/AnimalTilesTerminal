@@ -182,10 +182,10 @@ class Game:
       for x in range(0, self.scale):
         if self.board[x][y] is not None:
           color_print('{}({}) '.format(color(TILE_STYLE_NAME[self.board[y][x]], EColor.EMPHASIS),
-                                       color(TILE_STYLE_NAME(self.expect_board[y][x]))))
+                                       color(TILE_STYLE_NAME[self.expect_board[y][x]])))
         else:
           color_print('{}({}) '.format('空',
-                              color(TILE_STYLE_NAME(self.expect_board[y][x]))))
+                              color(TILE_STYLE_NAME[self.expect_board[y][x]])))
       print('')
 
   def _translate_and_print(self, recv):
