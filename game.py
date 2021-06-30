@@ -114,6 +114,9 @@ class Game:
     
     if self._have_pattern(self.expect_board):
       self._rand_expect_board()
+    else:
+      for p in self.players:
+        p.output(Game.make_message('rst_brd', 0, self.expect_board))
 
   def _init_hand(self):
     self.players[0].hand[BIRD | FISH | INSECT | MAMMAL] = 2
@@ -134,6 +137,8 @@ class Game:
         shuffle(pool)
         self.pool.extend(pool)
       self.shop.append(self.pool.pop())
+    for p in self.players:
+      p.output(Game.make_message('rst_shp', 0, self.shop))
 
   def start(self):
     if not self.client:
@@ -181,9 +186,12 @@ class Game:
     """
     op = self.players[self.sp]
     p = self.players[1 - self.sp]
+    count = 0
+    for hand in op.hand:
+      count += hand
     color_print("对手分数: {} 对手剩余瓷砖数: {} 对方额外得分数: {}".format(
       color(op.score, EColor.NUMBER), 
-      color(len(op.hand), EColor.NUMBER),
+      color(count, EColor.NUMBER),
       color(op.extra, EColor.NUMBER)
     ))
     for y in range(0, self.scale):
@@ -200,15 +208,18 @@ class Game:
     for i in range(0, SHOP_VOLUME):
       s += '{} {}|'.format(color(TILE_STYLE_NAME[self.shop[i]], EColor.EMPHASIS), color(str(cost), EColor.NUMBER))
       cost += 1
+    count = 0
+    for hand in p.hand:
+      count += hand
     color_print(s)
     color_print("您的分数: {} 剩余瓷砖数: {} 额外得分数: {}".format(
       color(p.score, EColor.NUMBER), 
-      color(len(p.hand), EColor.NUMBER),
+      color(count, EColor.NUMBER),
       color(p.extra, EColor.NUMBER)
     ))
     s = '您的瓷砖: '
-    for style in TILE_STYLE_NAME.keys:
-      s += '{} {}, '.format(TILE_STYLE_NAME[style], p.hand[style])
+    for style in TILE_STYLE_NAME.keys():
+      s += '{} {}, '.format(color(TILE_STYLE_NAME[style], EColor.EMPHASIS), color(p.hand[style], EColor.NUMBER))
     color_print(s)
 
 
@@ -217,6 +228,9 @@ class Game:
     if recv['op'] == 'rst_brd':
       if self.client:
         self.expect_board = recv['data']
+    elif recv['op'] == 'rst_shp':
+      if self.client:
+        self.shop = recv['data']
     elif recv['op'] == 'dcd_sp':
       if recv['p']:
         if self.client:

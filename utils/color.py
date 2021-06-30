@@ -4,6 +4,7 @@ _color = {EColor.DEFAULT_COLOR: '<dc--|{}>',
           EColor.PLAYER_NAME: '<em--|{}>',
           EColor.OP_PLAYER: '<op--|{}>',
           EColor.EMPHASIS: '<emn-|{}>',
+          EColor.NUMBER: '<num-|{}>',
           EColor.ERROR: '<err-|{}>',
           }
 
