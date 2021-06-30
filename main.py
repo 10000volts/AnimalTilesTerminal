@@ -42,7 +42,7 @@ if __name__ == '__main__':
     conn, addr = s.accept()
 
     color_print("{}加入了比赛！".format(color(addr, EColor.EMPHASIS)))
-    io = IO(s)
+    io = IO(conn)
     g = Game(False, io)
     g.start()
 

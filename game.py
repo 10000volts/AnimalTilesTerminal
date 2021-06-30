@@ -162,8 +162,9 @@ class Game:
         win = self.action(self.players[1])
         if win > -1:
           break
-    while self.win == -1:
-      self._translate_and_print(self.io.recv())
+    else:
+      while self.win == -1:
+        self._translate_and_print(self.io.recv())
 
   def action(self, p: Player) -> int:
     # 返回值：-1 未决出胜负 0 先手玩家胜 1 后手玩家胜
@@ -178,8 +179,8 @@ class Game:
     """
     打印当前局面。
     """
-    s = ''
     for y in range(0, self.scale):
+      s = ''
       for x in range(0, self.scale):
         if self.board[x][y] is not None:
           s += '{}({}) '.format(color(TILE_STYLE_NAME[self.board[y][x]], EColor.EMPHASIS),
@@ -192,7 +193,7 @@ class Game:
     recv = json.loads(recv)
     if recv['op'] == 'rst_brd':
       if self.client:
-        self.expect_board = json.loads(recv['data'])
+        self.expect_board = recv['data']
       self._print_board()
     elif recv['op'] == 'dcd_sp':
       if recv['p']:
