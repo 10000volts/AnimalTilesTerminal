@@ -6,7 +6,7 @@ class IO:
     self.socket.send((message + '|').encode())
 
   def recv(self):
-    recv =  self.socket.recv(1024).decode().split('|')
-    while len(recv) == 0 and len(recv[0]) > 0:
-      recv =  self.socket.recv(1024).decode().split('|')
-    return recv[0]
+    d = self.socket.recv(2048).decode()
+    while d[-1] != '|':
+      d += self.socket.recv(2048).decode()
+    return d.split('|')[0]
