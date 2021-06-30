@@ -1,6 +1,7 @@
 from enum import Enum
 import random
 import json
+import re
 
 from myio import IO
 from utils.color import color, color_print, EColor
@@ -190,8 +191,16 @@ class Game:
     while True:
       try:
         cmd = p.input(Game.make_message('req_act', 1, None, True))
-        print(cmd)
-        break
+        m = re.match('put ([FBfIM]) ([0-{}]) ([0-{}])'.format(self.scale-1, self.scale-1), cmd, re.M)
+        if m is not None:
+          print(m.group(2))
+          print(m.group(3))
+          print(m.group(4))
+          break
+        m = re.match('buy [0-{}]'.format(SHOP_VOLUME), cmd, re.M)
+        if m is not None:
+          print(m.group(2))
+          break
       except Exception as ex:
         pass
     self.act_next = 1 - self.act_next
