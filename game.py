@@ -15,6 +15,7 @@ MAMMAL = 8
 FLOWER = 15
 
 TILE_STYLE_NAME = {1: '鸟', 2: '鱼', 4: '虫', 8: '兽', 15: '花'}
+TILE_COST = {1: 0, 2: 0, 4: 0, 8: 0, 15: 1}
 
 class Player:
   def __init__(self, inp, out) -> None:
@@ -113,9 +114,6 @@ class Game:
     
     if self._have_pattern(self.expect_board):
       self._rand_expect_board()
-    else:
-      for p in self.players:
-        p.output(Game.make_message('rst_brd', 0, self.expect_board))
 
   def _init_hand(self):
     self.players[0].hand[BIRD | FISH | INSECT | MAMMAL] = 2
@@ -154,6 +152,8 @@ class Game:
 
       self._init_hand()
       self._replenish()
+      for p in self.players:
+        p.output(Game.make_message('init', 0, None))
 
       while True:
         win = self.action(self.players[0])
@@ -179,6 +179,13 @@ class Game:
     """
     打印当前局面。
     """
+    op = self.players[self.sp]
+    p = self.players[1 - self.sp]
+    color_print("对手分数: {} 对手剩余瓷砖数: {} 对方额外得分数: {}".format(
+      color(op.score, EColor.NUMBER), 
+      color(len(op.hand), EColor.NUMBER),
+      color(op.extra, EColor.NUMBER)
+    ))
     for y in range(0, self.scale):
       s = ''
       for x in range(0, self.scale):
@@ -188,13 +195,28 @@ class Game:
         else:
           s += '{}({}) '.format('空', color(TILE_STYLE_NAME[self.expect_board[y][x]]))
       color_print(s)
+    s = '商店: '
+    cost = 0
+    for i in range(0, SHOP_VOLUME):
+      s += '{} {}|'.format(color(TILE_STYLE_NAME[self.shop[i]], EColor.EMPHASIS), color(str(cost), EColor.NUMBER))
+      cost += 1
+    color_print(s)
+    color_print("您的分数: {} 剩余瓷砖数: {} 额外得分数: {}".format(
+      color(p.score, EColor.NUMBER), 
+      color(len(p.hand), EColor.NUMBER),
+      color(p.extra, EColor.NUMBER)
+    ))
+    s = '您的瓷砖: '
+    for style in TILE_STYLE_NAME.keys:
+      s += '{} {}, '.format(TILE_STYLE_NAME[style], p.hand[style])
+    color_print(s)
+
 
   def _translate_and_print(self, recv):
     recv = json.loads(recv)
     if recv['op'] == 'rst_brd':
       if self.client:
         self.expect_board = recv['data']
-      self._print_board()
     elif recv['op'] == 'dcd_sp':
       if recv['p']:
         if self.client:
@@ -208,4 +230,6 @@ class Game:
           self.p2 = self.players[1]
           self.players[1].score = 1
         color_print('对方获得了先手!', EColor.EMPHASIS)
+    elif recv['op'] == 'init':
+      self._print_board()
       
