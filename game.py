@@ -193,9 +193,9 @@ class Game:
       cmd = p.input(Game.make_message('req_act', 1, None, True))
       m = re.search('put ([FBfIM]) ([0-{}]) ([0-{}])'.format(self.scale-1, self.scale-1), cmd)
       if m is not None:
+        print(m.group(1))
         print(m.group(2))
         print(m.group(3))
-        print(m.group(4))
         break
       m = re.search('buy ([1-{}])'.format(SHOP_VOLUME), cmd)
       if m is not None:
