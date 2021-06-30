@@ -188,21 +188,19 @@ class Game:
 
   def action(self, p: Player) -> int:
     # 返回值：-1 未决出胜负 0 先手玩家胜 1 后手玩家胜
-    while True:
-      try:
-        cmd = p.input(Game.make_message('req_act', 1, None, True))
-        m = re.match('put ([FBfIM]) ([0-{}]) ([0-{}])'.format(self.scale-1, self.scale-1), cmd, re.M)
-        if m is not None:
-          print(m.group(2))
-          print(m.group(3))
-          print(m.group(4))
-          break
-        m = re.match('buy [0-{}]'.format(SHOP_VOLUME), cmd, re.M)
-        if m is not None:
-          print(m.group(2))
-          break
-      except Exception as ex:
-        pass
+    flag = True
+    while flag:
+      cmd = p.input(Game.make_message('req_act', 1, None, True))
+      m = re.search('put ([FBfIM]) ([0-{}]) ([0-{}])'.format(self.scale-1, self.scale-1), cmd)
+      if m is not None:
+        print(m.group(2))
+        print(m.group(3))
+        print(m.group(4))
+        break
+      m = re.search('buy ([1-{}])'.format(SHOP_VOLUME), cmd)
+      if m is not None:
+        print('rnm,')
+        break
     self.act_next = 1 - self.act_next
     return -1
 
