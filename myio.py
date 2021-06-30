@@ -7,6 +7,6 @@ class IO:
 
   def recv(self):
     recv =  self.socket.recv(1024).decode().split('|')
-    while len(recv) == 0 and recv[0] != '':
+    while len(recv) == 0 and len(recv[0]) > 0:
       recv =  self.socket.recv(1024).decode().split('|')
     return recv[0]
