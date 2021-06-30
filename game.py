@@ -1,4 +1,5 @@
 from enum import Enum
+from os import set_blocking
 import random
 import json
 import re
@@ -56,8 +57,8 @@ class Game:
     self.io = io
 
     self.scale = scale
-    self.expect_board = [[None for i in range(scale)] for j in range(scale)]
-    self.board = [[None for i in range(scale)] for j in range(scale)]
+    self.expect_board = [[0 for i in range(scale)] for j in range(scale)]
+    self.board = [[0 for i in range(scale)] for j in range(scale)]
     # 服务端
     def out1(m):
       self._translate_and_print(m)
@@ -176,31 +177,62 @@ class Game:
         p.output(Game.make_message('init', 0, None))
 
       while True:
-        win = self.action(self.players[self.act_next])
+        win = self._action(self.players[self.act_next])
         if win > -1:
           break
-        win = self.action(self.players[self.act_next])
+        win = self._action(self.players[self.act_next])
         if win > -1:
           break
     else:
       while self.win == -1:
         self._translate_and_print(self.io.recv())
 
-  def action(self, p: Player) -> int:
+  def _put(self, p: Player, style, x, y):
+    f = False
+
+    p.hand[style] -= 1
+    self.board[y][x] = style
+    if style & self.expect_board[y][x]:
+      p.score += 1 + p.extra
+      p.extra += 1
+      f = True
+    # 消除
+    if self._have_pattern(self.board):
+      l = self._find_pattern(self.board)
+      for _y in range(0, self.scale):
+        for _x in range(0, self.scale):
+          if l[_y][_x] and (_y != y or _x != x):
+            self.board[_y][_x] = 0
+      self.players[p.sp].extra = 0
+      self.act_next = 1-p.sp
+
+      f = True
+    if not f:
+      p.score -= 1
+      p.extra = 0
+    for _p in self.players:
+      _p.output(Game.make_message('put', p.sp==self.sp, [style, x, y, p.score, p.extra,
+                                                         self.players[p.sp].extra, self.board]))
+
+  def _action(self, p: Player) -> int:
     # 返回值：-1 未决出胜负 0 先手玩家胜 1 后手玩家胜
     flag = True
     while flag:
       cmd = p.input(Game.make_message('req_act', 1, None, True))
       m = re.search('put ([FBfIM]) ([0-{}]) ([0-{}])'.format(self.scale-1, self.scale-1), cmd)
       if m is not None:
-        print(m.group(1))
-        print(m.group(2))
-        print(m.group(3))
-        break
+        style = {'F': 15, 'B': 1, 'f': 2, 'I': 4, 'M': 8}
+        if p.hand[style[m.group(1)]]:
+          x = int(m.group(2))
+          y = int(m.group(3))
+          if self.board[y][x] == 0:
+            self._put(p, style[m.group(1)], x, y)
+            break
       m = re.search('buy ([1-{}])'.format(SHOP_VOLUME), cmd)
       if m is not None:
-        print('rnm,')
+        
         break
+      p.output(Game.make_message('err', 1, '输入有误qaq'))
     self.act_next = 1 - self.act_next
     return -1
 
@@ -222,7 +254,7 @@ class Game:
     for y in range(0, self.scale):
       s = ''
       for x in range(0, self.scale):
-        if self.board[x][y] is not None:
+        if self.board[y][x] > 0:
           s += '{}({}) '.format(color(TILE_STYLE_NAME[self.board[y][x]], EColor.EMPHASIS),
                                 color(TILE_STYLE_NAME[self.expect_board[y][x]]))
         else:
@@ -284,4 +316,23 @@ class Game:
       if self.client:
         cmd = input()
         self.io.send(cmd)
-      
+    elif recv['op'] == 'err':
+      color_print('出错辣qaq: {}'.format(recv['data']), EColor.ERROR)
+    elif recv['op'] == 'put':
+      if self.client:
+        if recv['p']:
+          self.players[1-self.sp].hand[recv['data'][0]] -= 1
+          self.players[1-self.sp].score = recv['data'][3]
+          self.players[1-self.sp].extra = recv['data'][4]
+          self.players[self.sp].extra = recv['data'][5]
+        else:
+          self.players[self.sp].hand_count -= 1
+          self.players[self.sp].score = recv['data'][3]
+          self.players[self.sp].extra = recv['data'][4]
+          self.players[1-self.sp].extra = recv['data'][5]
+        self.board = recv['data'][6]
+      self._print_board()
+      color_print('在({}, {})放下了瓷砖!'.format(
+        color(recv['data'][1], EColor.NUMBER),
+        color(recv['data'][2], EColor.NUMBER),
+      ))
