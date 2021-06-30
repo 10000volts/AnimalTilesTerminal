@@ -25,6 +25,11 @@ if __name__ == '__main__':
 
     io = IO(s)
     color_print("已加入比赛！", EColor.EMPHASIS)
+
+    g = Game(True, io)
+    g.start()
+
+    s.close()
   else:
     try:
       s.bind((ip, port))
@@ -38,7 +43,7 @@ if __name__ == '__main__':
 
     color_print("{}加入了比赛！".format(color(addr, EColor.EMPHASIS)))
     io = IO(s)
-    g = Game(io)
+    g = Game(False, io)
     g.start()
 
     conn.close()
