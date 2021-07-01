@@ -162,7 +162,7 @@ class Game:
         self.p1 = self.players[0]
         self.p2 = self.players[1]
       self.p1.sp = 1
-      self.p1.sp = 0
+      self.p2.sp = 0
       self.p1.output(Game.make_message('dcd_sp', 1, None))
       self.p2.output(Game.make_message('dcd_sp', 0, None))
       # 后手初始获得1分
@@ -203,16 +203,28 @@ class Game:
         for _x in range(0, self.scale):
           if l[_y][_x] and (_y != y or _x != x):
             self.board[_y][_x] = 0
-      self.players[p.sp].extra = 0
-      self.act_next = 1-p.sp
+      # 跳过对方的下个回合
+      self.act_next = 1-self.act_next
 
       f = True
     if not f:
       p.score -= 1
       p.extra = 0
     for _p in self.players:
-      _p.output(Game.make_message('put', p.sp==self.sp, [style, x, y, p.score, p.extra,
-                                                         self.players[p.sp].extra, self.board]))
+      _p.output(Game.make_message('put', p is _p, [style, x, y, p.score, p.extra,
+                                                   self.players[p.sp].extra, self.board]))
+  
+  def _buy(self, p: Player, count, cost):
+    p.score -= cost
+    p.extra = 0
+    for i in range(0, count):
+      p.hand[self.shop.pop(0)] += 1
+    self._replenish()
+    for _p in self.players:
+      if p is _p:
+        _p.output(Game.make_message('buy', 1, [p.score, p.hand, self.shop]))
+      else:
+        _p.output(Game.make_message('buy', 0, [p.score, count, self.shop]))
 
   def _action(self, p: Player) -> int:
     # 返回值：-1 未决出胜负 0 先手玩家胜 1 后手玩家胜
@@ -230,11 +242,24 @@ class Game:
             break
       m = re.search('buy ([1-{}])'.format(SHOP_VOLUME), cmd)
       if m is not None:
-        
-        break
+        count = int(m.group(1))
+        cost = 0
+        for c in range(0, count):
+          cost += TILE_COST[self.shop[c]] + 1
+        if p.score >= cost:
+          self._buy(p, count, cost)
+          break
       p.output(Game.make_message('err', 1, '输入有误qaq'))
-    self.act_next = 1 - self.act_next
-    return -1
+    if p.score < 0:
+      return p.sp
+    
+    # 被填满时结束游戏
+    for y in range(0, self.scale):
+      for x in range(0, self.scale):
+        if self.board[y][x] == 0:
+          self.act_next = 1 - self.act_next
+          return -1
+    return self.p1.score < self.p2.score
 
   def _print_board(self):
     """
@@ -279,7 +304,7 @@ class Game:
     for style in TILE_STYLE_NAME.keys():
       s += '{} {}, '.format(color(TILE_STYLE_NAME[style], EColor.EMPHASIS), color(p.hand[style], EColor.NUMBER))
     color_print(s)
-
+    print("")
 
   def _translate_and_print(self, recv):
     recv = json.loads(recv)
@@ -318,7 +343,11 @@ class Game:
         self.io.send(cmd)
     elif recv['op'] == 'err':
       color_print('出错辣qaq: {}'.format(recv['data']), EColor.ERROR)
-    elif recv['op'] == 'put':
+    elif recv['op'] == 'put':      
+      color_print('在({}, {})放下了瓷砖!'.format(
+        color(recv['data'][1], EColor.NUMBER),
+        color(recv['data'][2], EColor.NUMBER),
+      ))
       if self.client:
         if recv['p']:
           self.players[1-self.sp].hand[recv['data'][0]] -= 1
@@ -332,7 +361,14 @@ class Game:
           self.players[1-self.sp].extra = recv['data'][5]
         self.board = recv['data'][6]
       self._print_board()
-      color_print('在({}, {})放下了瓷砖!'.format(
-        color(recv['data'][1], EColor.NUMBER),
-        color(recv['data'][2], EColor.NUMBER),
-      ))
+    elif recv['op'] == 'buy':
+      color_print('购买了瓷砖!', EColor.EMPHASIS)
+      if self.client:
+        if recv['p']:
+          self.players[1-self.sp].score = recv['data'][0]
+          self.players[1-self.sp].hand = recv['data'][1]
+        else:
+          self.players[self.sp].score = recv['data'][0]
+          self.players[self.sp].hand_count -= recv['data'][1]
+        self.shop = recv['data'][2]
+      self._print_board()
