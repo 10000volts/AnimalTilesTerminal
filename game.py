@@ -203,6 +203,7 @@ class Game:
         for _x in range(0, self.scale):
           if l[_y][_x] and (_y != y or _x != x):
             self.board[_y][_x] = 0
+      self.players[p.sp].extra -= 1
       # 跳过对方的下个回合
       self.act_next = 1-self.act_next
 
@@ -216,7 +217,7 @@ class Game:
   
   def _buy(self, p: Player, count, cost):
     p.score -= cost
-    p.extra = 0
+    p.extra = int(p.extra / 2)
     for i in range(0, count):
       p.hand[self.shop.pop(0)] += 1
     self._replenish()
@@ -243,7 +244,7 @@ class Game:
       m = re.search('buy ([1-{}])'.format(SHOP_VOLUME), cmd)
       if m is not None:
         count = int(m.group(1))
-        cost = 0
+        cost = -1
         for c in range(0, count):
           cost += TILE_COST[self.shop[c]] + 1
         if p.score >= cost:
@@ -369,6 +370,6 @@ class Game:
           self.players[1-self.sp].hand = recv['data'][1]
         else:
           self.players[self.sp].score = recv['data'][0]
-          self.players[self.sp].hand_count -= recv['data'][1]
+          self.players[self.sp].hand_count += recv['data'][1]
         self.shop = recv['data'][2]
       self._print_board()
