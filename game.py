@@ -127,8 +127,9 @@ class Game:
 
   def _init_hand(self):
     self.players[0].hand[BIRD | FISH | INSECT | MAMMAL] = 2
-    self.players[1].hand[BIRD | FISH | INSECT | MAMMAL] = 2
-    count = 2
+    self.players[1].hand[BIRD | FISH | INSECT | MAMMAL] = 1
+    client = self.players[self.sp]
+    count = self.players[client.sp].hand[BIRD | FISH | INSECT | MAMMAL]
     for i in range(0, 8):
       style = self.pool.pop()
       self.players[0].hand[style] += 1
@@ -136,7 +137,6 @@ class Game:
       self.players[1].hand[style] += 1
       count += 1
     # 只给客户端发送
-    client = self.players[self.sp]
     client.output(Game.make_message('rst_hnd', 1, client.hand))
     client.output(Game.make_message('rst_hnd', 0, count))
 
@@ -246,7 +246,7 @@ class Game:
         count = int(m.group(1))
         cost = -1
         for c in range(0, count):
-          cost += TILE_COST[self.shop[c]] + 1
+          cost += TILE_COST[self.shop[c]] + 1 + int(p.score > self.players[p.sp].score)
         if p.score >= cost:
           self._buy(p, count, cost)
           break
@@ -288,10 +288,10 @@ class Game:
                                 color(TILE_STYLE_NAME[self.expect_board[y][x]]))
       color_print(s)
     s = '商店: '
-    cost = 0
+    cost = -1
     for i in range(0, SHOP_VOLUME):
+      cost += 1 + TILE_COST[self.shop[i]] + int(p.score > op.score)
       s += '{} {}|'.format(color(TILE_STYLE_NAME[self.shop[i]], EColor.EMPHASIS), color(str(cost), EColor.NUMBER))
-      cost += 1 + TILE_COST[self.shop[i]]
     count = 0
     for hand in p.hand:
       count += hand
