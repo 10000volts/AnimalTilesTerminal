@@ -223,9 +223,9 @@ class Game:
     self._replenish()
     for _p in self.players:
       if p is _p:
-        _p.output(Game.make_message('buy', 1, [p.score, p.hand, self.shop]))
+        _p.output(Game.make_message('buy', 1, [p.score, p.extra, p.hand, self.shop]))
       else:
-        _p.output(Game.make_message('buy', 0, [p.score, count, self.shop]))
+        _p.output(Game.make_message('buy', 0, [p.score, p.extra, count, self.shop]))
 
   def _action(self, p: Player) -> int:
     # 返回值：-1 未决出胜负 0 先手玩家胜 1 后手玩家胜
@@ -291,7 +291,7 @@ class Game:
     cost = 0
     for i in range(0, SHOP_VOLUME):
       s += '{} {}|'.format(color(TILE_STYLE_NAME[self.shop[i]], EColor.EMPHASIS), color(str(cost), EColor.NUMBER))
-      cost += 1
+      cost += 1 + TILE_COST[self.shop[i]]
     count = 0
     for hand in p.hand:
       count += hand
@@ -367,9 +367,11 @@ class Game:
       if self.client:
         if recv['p']:
           self.players[1-self.sp].score = recv['data'][0]
-          self.players[1-self.sp].hand = recv['data'][1]
+          self.players[1-self.sp].extra = recv['data'][1]
+          self.players[1-self.sp].hand = recv['data'][2]
         else:
           self.players[self.sp].score = recv['data'][0]
-          self.players[self.sp].hand_count += recv['data'][1]
-        self.shop = recv['data'][2]
+          self.players[self.sp].extra = recv['data'][1]
+          self.players[self.sp].hand_count += recv['data'][2]
+        self.shop = recv['data'][3]
       self._print_board()
